@@ -4,21 +4,32 @@
  * Implements hook_form_alter().
  */
 function gsb_entity_reference_delete_warning_form_alter(&$form, &$form_state, $form_id) {
+  global $base_url;
   if ($form_id == 'node_delete_confirm') {
     $nid = $form['nid']['#value'];
-    gsb_entity_reference_delete_warning_test($nid);
+    //$nid = '382271';
+    //$nid = '384816';
+    //$nid = '312206';
+    $nids = gsb_entity_reference_delete_warning_get_entity_references_to_node($nid);
+    $nodes = node_load_multiple($nids);
+    $warning_lines = array();
+    $options = array();
+    $options['attributes']['target'] = '_blank';
+    foreach($nodes as $node) {
+      $warning_lines[] = '<br/>' .
+        l('('. $node->type . ') ' . $node->title, $base_url . '/node/' . $node->nid, $options);
+    }
+    if (!empty($warning_lines)) {
+      $warning_message = t("Warning: The following content references this node:");
+      $form['warnings'] = array(
+        '#markup' => '<br/><br/>' . $warning_message . implode($warning_lines),
+      );
+    }
   }
 }
 
-function gsb_entity_reference_delete_warning_test($nid) {
-  //$nid = '382271';
-  //$nid = '384816';
-  //$nid = '312206';
-  gsb_entity_reference_delete_warning_get_entity_references_to_node($nid);
-}
-
 function gsb_entity_reference_delete_warning_get_entity_references_to_node($nid) {
-  $nodes = array();
+  $nids = array();
 
   // get the field map info
   $field_map = field_info_field_map();
@@ -43,29 +54,31 @@ function gsb_entity_reference_delete_warning_get_entity_references_to_node($nid)
     return !empty($reference_fields['bundles']['node']) ? TRUE : FALSE;
   });
 
-  $found_nodes = array();
+  $found_nids = array();
   foreach($node_fields as $field_name => $field_info) {
     $type = 'node';
-    $nodes = array_merge(gsb_entity_reference_delete_warning_get_field_references_to_node($field_name, $type, $nid), $nodes);
+    $found_nids = array_merge(gsb_entity_reference_delete_warning_get_field_references_to_node($field_name, $type, $nid), $found_nids);
   }
-  $nodes = array_merge($nodes, $found_nodes);
+  $nids = array_merge($nids, $found_nids);
 
-  $found_nodes = array();
+  $found_nids = array();
   foreach($fc_fields as $field_name => $field_info) {
     $type = 'fc';
-    $nodes = array_merge(gsb_entity_reference_delete_warning_get_field_references_to_node($field_name, $type, $nid), $nodes);
+    $found_nids = array_merge(gsb_entity_reference_delete_warning_get_field_references_to_node($field_name, $type, $nid), $found_nids);
   }
-  $nodes = array_merge($nodes, $found_nodes);
+  $nids = array_merge($nids, $found_nids);
 
-  $found_nodes = array();
+  $found_nids = array();
   foreach($fpp_fields as $field_name => $field_info) {
     $type = 'fpp';
-    $nodes = array_merge(gsb_entity_reference_delete_warning_get_field_references_to_node($field_name, $type, $nid), $nodes);
+    $found_nids = array_merge(gsb_entity_reference_delete_warning_get_field_references_to_node($field_name, $type, $nid), $found_nids);
   }
-  $nodes = array_merge($nodes, $found_nodes);
+  $nids = array_merge($nids, $found_nids);
 
-  $nodes = array_unique($nodes, SORT_REGULAR);
-  dpm($nodes);
+  $nids = array_unique($nids, SORT_REGULAR);
+  dpm($nids);
+
+  return $nids;
 }
 
 function gsb_entity_reference_delete_warning_get_field_references_to_node($field_name, $type, $nid) {
