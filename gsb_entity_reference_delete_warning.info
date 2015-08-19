@@ -1,0 +1,4 @@
+name = GSB Entity Reference Delete Warning
+description = Provides a warning message on any node delete page.
+core = 7.x
+package = GSB
