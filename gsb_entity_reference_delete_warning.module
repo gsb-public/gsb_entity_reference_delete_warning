@@ -16,8 +16,8 @@ function gsb_entity_reference_delete_warning_form_alter(&$form, &$form_state, $f
     $options = array();
     $options['attributes']['target'] = '_blank';
     foreach($nodes as $node) {
-      $warning_lines[] = '<br/>' .
-        l('('. $node->type . ') ' . $node->title, $base_url . '/node/' . $node->nid, $options);
+      $warning_lines[] = '<br/>';
+      $warning_lines[] = l('('. $node->type . ') ' . $node->title, $base_url . '/node/' . $node->nid, $options);
     }
     if (!empty($warning_lines)) {
       $warning_message = t("Warning: The following content references this node:");
@@ -76,7 +76,6 @@ function gsb_entity_reference_delete_warning_get_entity_references_to_node($nid)
   $nids = array_merge($nids, $found_nids);
 
   $nids = array_unique($nids, SORT_REGULAR);
-  dpm($nids);
 
   return $nids;
 }
@@ -84,33 +83,33 @@ function gsb_entity_reference_delete_warning_get_entity_references_to_node($nid)
 function gsb_entity_reference_delete_warning_get_field_references_to_node($field_name, $type, $nid) {
   $nodes = array();
   if ($type == 'node') {
-    $records = gsb_entity_reference_delete_warning_getTargetInfo($field_name, $nid);
+    $records = gsb_entity_reference_delete_warning_get_target_info($field_name, $nid);
     foreach ($records as $record) {
       $nodes[] = $record->entity_id;
     }
   }
   else if ($type == 'fc') {
-    $records = gsb_entity_reference_delete_warning_getTargetInfo($field_name, $nid);
+    $records = gsb_entity_reference_delete_warning_get_target_info($field_name, $nid);
     foreach ($records as $record) {
       $entity_id = $record->entity_id;
       $value_field_name = $record->bundle;
-      $value_records = gsb_entity_reference_delete_warning_getValueInfo($entity_id, $value_field_name);
+      $value_records = gsb_entity_reference_delete_warning_get_value_info($entity_id, $value_field_name);
       foreach ($value_records as $value_record) {
         $nodes[] = $value_record->entity_id;
       }
     }
   }
   else if ($type == 'fpp') {
-    $records = gsb_entity_reference_delete_warning_getTargetInfo($field_name, $nid);
+    $records = gsb_entity_reference_delete_warning_get_target_info($field_name, $nid);
     foreach ($records as $record) {
       $fpid = $record->entity_id;
-      $fpp_records = gsb_entity_reference_delete_warning_getSubTypeInfo($fpid);
+      $fpp_records = gsb_entity_reference_delete_warning_get_subtype_info($fpid);
       foreach ($fpp_records as $fpp_record) {
         $uuid = $fpp_record->uuid;
-        $pane_records = gsb_entity_reference_delete_warning_getPaneInfo($uuid);
+        $pane_records = gsb_entity_reference_delete_warning_get_pane_info($uuid);
         foreach ($pane_records as $pane_record) {
           $did = $pane_record->did;
-          $entity_records = gsb_entity_reference_delete_warning_getPanelizerEntityInfo($did);
+          $entity_records = gsb_entity_reference_delete_warning_get_panelizer_entity_info($did);
           foreach ($entity_records as $entity_record) {
             $nodes[] = $entity_record->entity_id;
           }
@@ -121,7 +120,7 @@ function gsb_entity_reference_delete_warning_get_field_references_to_node($field
   return $nodes;
 }
 
-function gsb_entity_reference_delete_warning_getTargetInfo($field_name, $target_id) {
+function gsb_entity_reference_delete_warning_get_target_info($field_name, $target_id) {
   $target_field_name = $field_name . '_target_id';
   $table_name = 'field_data_' . $field_name;
   $result = db_select($table_name, 'fd')
@@ -135,7 +134,7 @@ function gsb_entity_reference_delete_warning_getTargetInfo($field_name, $target_
   return $records;
 }
 
-function gsb_entity_reference_delete_warning_getValueInfo($entity_id, $field_name) {
+function gsb_entity_reference_delete_warning_get_value_info($entity_id, $field_name) {
   $value_field_name = $field_name . '_value';
   $value_table_name = 'field_data_' . $field_name;
   $result = db_select($value_table_name, 'fd')
@@ -149,8 +148,7 @@ function gsb_entity_reference_delete_warning_getValueInfo($entity_id, $field_nam
   return $records;
 }
 
-function gsb_entity_reference_delete_warning_getSubTypeInfo($fpid) {
-  //dpm('fpid = ' . $fpid);
+function gsb_entity_reference_delete_warning_get_subtype_info($fpid) {
   $result = db_select('fieldable_panels_panes', 'fpp')
     ->fields('fpp', array('fpid', 'bundle', 'uuid'))
     ->condition('fpp.fpid', $fpid, '=')
@@ -162,9 +160,8 @@ function gsb_entity_reference_delete_warning_getSubTypeInfo($fpid) {
   return $records;
 }
 
-function gsb_entity_reference_delete_warning_getPaneInfo($uuid) {
+function gsb_entity_reference_delete_warning_get_pane_info($uuid) {
   $subtype = 'uuid:' . $uuid;
-  //dpm('subtype = ' . $subtype);
   $result = db_select('panels_pane', 'pp')
     ->fields('pp', array('pid', 'did', 'subtype'))
     ->condition('pp.subtype', $subtype, '=')
@@ -176,8 +173,7 @@ function gsb_entity_reference_delete_warning_getPaneInfo($uuid) {
   return $records;
 }
 
-function gsb_entity_reference_delete_warning_getPanelizerEntityInfo($did) {
-  //dpm('did = ' . $did);
+function gsb_entity_reference_delete_warning_get_panelizer_entity_info($did) {
   $result = db_select('panelizer_entity', 'pe')
     ->fields('pe', array('entity_type', 'entity_id', 'did'))
     ->condition('pe.did', $did, '=')
